@@ -1,0 +1,92 @@
+<?php 
+
+/**
+ * AutoPostSocialMidia [ HELPER ]
+ * Classe para automaticar post automaticos
+ * @copyright (c) 2017, Davson N. Santos - DAVTECH - SOLUÇÕES INTELIGENTES
+ */
+
+
+require 'Facebook/autoload.php';
+
+class AutoPostFacebook{
+
+	//CODIGOS DE ACESSO
+	private $App_id = 'APP_ID';
+	private $App_secret = 'SECRET_APP';
+	private $Token_access = 'TOKEN_ACCESS';
+
+
+	//private $PageId;
+	private $appAccessToken;
+	private $Facebook;
+	private $PostData;
+	public  $Result;
+
+	
+	function __construct(){
+		$this->Facebook = new Facebook\Facebook([
+					'app_id' => $this->App_id,
+					'app_secret' => $this->App_secret,
+					'default_graph_version' => 'v2.10'
+				]);
+		$this->Facebook->setDefaultAccessToken($this->Token_access);
+	}
+
+	public function AutoPost($Data){
+		$this->PostData = $Data;
+		$this->getValidUser();
+
+		if($this->PostData['page_id']):
+			  try {
+			      $response = $this->Facebook->post('/'.$this->PostData['page_id'].'/feed',array(
+			              "message" => $this->PostData['post_title'],
+			              "link" => $this->PostData['post_link'],
+			          ),
+			         $this->appAccessToken
+			      );
+			      // Success
+			      $this->Result = true;//$response->getGraphNode();
+			  } catch(Facebook\Exceptions\FacebookResponseException $e) {
+			    // When Graph returns an error
+			    $this->Result = '<p>Error de Graph: ' . $e->getMessage().'</p>';
+			  } catch(Facebook\Exceptions\FacebookSDKException $e) {
+			    // When validation fails or other local issues
+			    $this->Result = '<p>Error de Facebook SDK: ' . $e->getMessage().'</p>';
+			  }
+		endif;
+
+		return $this->Result;
+	}
+
+	public function getPages(){
+		$response = $this->Facebook->get('/me/accounts');
+
+		foreach ($response->getDecodedBody() as $allAccounts) {
+		    foreach ($allAccounts as $account ) { 
+		    	$this->Result[] = $account;
+		  	}
+		}
+		return $this->Result;
+    
+	}
+
+	private function getValidUser(){ 
+		$response = $this->Facebook->get('/me/accounts');
+
+		foreach ($response->getDecodedBody() as $allAccounts):
+		    foreach ($allAccounts as $account ):
+		      if(isset($account['id'])):
+		        if ($account['id'] == $this->PostData['page_id']):
+		            $this->appAccessToken = $account['access_token'];
+		        endif;
+		      endif;
+		    endforeach;
+		 endforeach;
+
+	}
+
+	
+}
+
+ ?>
